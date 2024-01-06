@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS links(
+    id INTEGER PRIMARY KEY NOT NULL,
+    link VARCHAR(255) NOT NULL UNIQUE,
+    dist INTEGER,
+    nextLink VARCHAR(255),
+    links VARCHAR(4096),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (nextLink) REFERENCES links(link)
+);
