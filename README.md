@@ -8,5 +8,5 @@ https://en.wikipedia.org/wiki/Modulo -> https://en.wikipedia.org/wiki/Carl_Fried
 
 
 #TODO
-[ ] Implement DB caching of links to save time on requests and parsing
-[ ] Create web interface to visualize the "Wiki crawl"
+- [ ] Implement DB caching of links to save time on requests and parsing
+- [ ] Create web interface to visualize the "Wiki crawl"
