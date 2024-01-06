@@ -20,11 +20,11 @@ async def migrate():
         logger.info("Database migration complete!")
 
 
-async def create_link(link : str, links : str) -> Optional[Dict]:
+async def create_link(link : str, links : str) -> Optional[Link]:
     try:
         async with _DbConnection() as cursor:
             await cursor.execute("INSERT INTO links (link, links) VALUES (?, ?)", (link, links))
-            return True
+            return Link(link, links)
     except Exception as e:
         logger.error(e)
         return False
@@ -43,8 +43,7 @@ async def get_link(link : str) -> Link:
         async with _DbConnection() as cursor:
             await cursor.execute("SELECT * FROM links WHERE link = ?", (link,))
             db_link = await cursor.fetchone()
-            link = Link()
-            link.load_from_db(db_link)
+            link = Link().load_from_db(db_link)
             return link
     except Exception as e:
         logger.error(e)
@@ -76,5 +75,7 @@ if __name__ == "__main__":
 
     asyncio.run(migrate())
     #print(asyncio.run(create_link("test", "test, test2")))
-    print(asyncio.run(get_all_links()))
+    for link in (asyncio.run(get_all_links())):
+        for links in (link[4].split(",")):
+            print(link[1], links)
     print(asyncio.run(get_link("test")))

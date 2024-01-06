@@ -2,9 +2,11 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import cchardet
+from models import Link
+import asyncio
+import db
 time_request = 0
 time_parse = 0
-count = 0
 session = requests.Session()
 def get_html(URL):
     global time_request
@@ -36,34 +38,48 @@ def get_links(html):
             links_list.append(link.get('href'))
     time_parse = time_parse + time.time() - now
     return links_list
-
-html = get_html("https://en.wikipedia.org/wiki/Modulo")
-#
-goal = "/wiki/Germans"
-wiki = "https://en.wikipedia.org"
-links = get_links(html)
+count = 0
+def list_to_str(list):
+    string = ""
+    for item in list:
+        string = string + item + ", "
+    return string
+db_time = time.time()
+async def main():
+    global db_time
+    global count
+    html = get_html("https://en.wikipedia.org/wiki/Germans")
+    #/wiki/Adolf_Hitler
+    goal = "/wiki/Adolf_Hitler"
+    wiki = "https://en.wikipedia.org"
+    links = get_links(html)
+    visited = []
+    while links:
+        print(count)
+        current_link = links.pop(0)
+        if current_link in visited:
+            continue
+        visited.append(current_link)
+        if current_link == goal:
+            #print("Found!")
+            break
+        else:
+            #print("Not yet!", current_link)
+            html = get_html(wiki + current_link)
+            count += 1
+            new_links = get_links(html)
+            temp = time.time()
+            await db.create_link(current_link, list_to_str(new_links))
+            db_time = db_time + (time.time() - temp)
+            links = links + new_links
+            #Remove duplicates
+            #links = list(set(links))
+    #print(html)
 time_now = time.time()
-visited = []
-while links:
-    print(count)
-    current_link = links.pop(0)
-    if current_link in visited:
-        continue
-    visited.append(current_link)
-    if current_link == goal:
-        #print("Found!")
-        break
-    else:
-        #print("Not yet!", current_link)
-        html = get_html(wiki + current_link)
-        count += 1
-        new_links = get_links(html)
-        links = links + new_links
-        #Remove duplicates
-        #links = list(set(links))
-#print(html)
+asyncio.run(main())
 print("Request time: ", time_request)
 print("Parse time: ", time_parse)
 print("Count: ", count)
 print("Total time: ", time.time() - time_now)
 print("Function times", time_request + time_parse)
+print("DB time: ", db_time)
