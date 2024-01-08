@@ -34,7 +34,7 @@ def get_links(html):
     for link in links:
         if link.get('href') is None:
             continue
-        if link.get('href').startswith('/wiki/'):
+        if link.get('href').startswith('/wiki/') and ":" not in link.get('href'):
             links_list.append(link.get('href'))
     time_parse = time_parse + time.time() - now
     return links_list
@@ -42,30 +42,46 @@ count = 0
 def list_to_str(list):
     string = ""
     for item in list:
-        string = string + item + ", "
+        string = string + item + "\n"
     return string
 db_time = time.time()
 async def main():
     global db_time
     global count
-    html = get_html("https://en.wikipedia.org/wiki/Germans")
+    html = get_html("https://en.wikipedia.org/wiki/Carl_Friedrich_Gauss")
+    #html = get_html("https://en.wikipedia.org/wiki/Germans")
     #/wiki/Adolf_Hitler
+    #https://en.wikipedia.org/wiki/Carl_Friedrich_Gauss
     goal = "/wiki/Adolf_Hitler"
     wiki = "https://en.wikipedia.org"
     links = get_links(html)
     visited = []
     while links:
-        print(count)
+        if "_lists" in links:
+            print("WTF")
+            break
+        #print(count)
         current_link = links.pop(0)
         if current_link in visited:
             continue
+        #print(current_link)
         visited.append(current_link)
         if current_link == goal:
-            #print("Found!")
+            print("Found!")
             break
         else:
             #print("Not yet!", current_link)
+            link_db : Link = await db.get_link(current_link)
+            if link_db is not None and link_db != False:
+                links = links + link_db.get_list()
+                count += 1
+                continue
+                pass
+                #continue
+                #break
+            print(wiki, current_link)
             html = get_html(wiki + current_link)
+            
             count += 1
             new_links = get_links(html)
             temp = time.time()

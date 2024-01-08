@@ -15,7 +15,9 @@ class Link():
         self.link_list = empty_str
 
     def get_list(self):
-        return self.link_list.split(",")
+        #_list = self.link_list.replace(",", "/,/")
+        _list = self.link_list.split("\n")
+        return [x.strip() for x in _list]
 
     def load_from_db(self, db_link):
         self.link = db_link[1]
