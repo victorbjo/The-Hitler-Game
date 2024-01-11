@@ -81,9 +81,10 @@ if __name__ == "__main__":
     '''for link in (asyncio.run(get_all_links()))[:4]:
         for links in (link[4].split(",")):
             print(link[1], links)'''
-    for link in (asyncio.run(get_all_links())):
-        print(link[1], link[1])
+    #for link in (asyncio.run(get_all_links())):
+    #    print(link[1], link[1])
     #print(asyncio.run(get_link("test")))
-    #print(asyncio.run(get_link("/wiki/German_language")))
+    print(len(asyncio.run(get_all_links())))
+    print("/wiki/Adolf_Hitler" in (asyncio.run(get_link("/wiki/Barack_Obama")).get_list()))
 #/wiki/German_language
 #/wiki/German_language
