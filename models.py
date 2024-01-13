@@ -1,3 +1,5 @@
+#import named tuple 
+from collections import namedtuple
 class Link():
     def __init__(self, link : str = "", link_list = "") -> None:
         self.link = link
@@ -27,3 +29,12 @@ class Link():
     
     def __repr__(self) -> str:
         return f"Link(link={self.link}, link_list={self.link_list.count(',')+1})" 
+Link_Tuple : namedtuple = namedtuple("Link_Tuple",["link", "prev"])#Fix named tuples
+#First tuple will have cost 1, second will have cost 2 unless it is known it points to hitler. In that case 
+
+if __name__ == "__main__":
+    pass
+    print(Link_Tuple(3,"germany","germans"))
+    #print(Link_Tuple(2,1,"europe","germany"))
+    #print(Link_Tuple(2,0,"world","europe"))
+    #print(heapq.heappop(q
