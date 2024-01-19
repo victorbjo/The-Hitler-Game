@@ -3,14 +3,12 @@ from bs4 import BeautifulSoup
 import time
 import cchardet
 from models import Link
+from models import Link_Tuple
 import asyncio
 import db
-time_request = 0
-time_parse = 0
+import json
 session = requests.Session()
 def get_html(URL):
-    global time_request
-    now = time.time()
     response = session.get(URL)
 
     # Check if the request was successful
@@ -20,99 +18,117 @@ def get_html(URL):
         print("Failed to retrieve content. Status code:", response.status_code)
         return None
         html_content = response.status_code
-    time_request = time_request + time.time() - now
     return html_content
 
-def get_links(html):
-    global time_parse
-    now = time.time()
+def get_links(html, current_link : Link_Tuple):
     soup = BeautifulSoup(html, 'lxml')
     container = soup.find('div', {'id': 'bodyContent'})
     if container is None:
         return []
     links = container.find_all('a')
     links_list = []
+    tuple_list = []
     for link in links:
         if link.get('href') is None:
             continue
         if link.get('href').startswith('/wiki/') and ":" not in link.get('href'):
-            links_list.append(link.get('href'))
-    time_parse = time_parse + time.time() - now
-    return links_list
+            temp_link = link.get('href')
+            tuple_list.append(Link_Tuple(temp_link, current_link.link))
+            links_list.append(temp_link)
+    return tuple_list, links_list
+
+
 count = 0
 def list_to_str(list):
     string = ""
     for item in list:
         string = string + item + "\n"
     return string
-db_time = time.time()
-async def main():
-    global db_time
-    global count
-    #html = get_html("https://en.wikipedia.org/wiki/Carl_Friedrich_Gauss")
-    #html = get_html("https://en.wikipedia.org/wiki/Bruce_Springsteen")
-    html = get_html("https://en.wikipedia.org/wiki/Kylie_Minogue")
-    html = get_html("https://en.wikipedia.org/wiki/Boundaries_between_the_continents")
-    #html = get_html("https://en.wikipedia.org/wiki/Germans")
-    #/wiki/Adolf_Hitler
-    #https://en.wikipedia.org/wiki/Carl_Friedrich_Gauss
-    goal = "/wiki/Adolf_Hitler"
+
+def list_to_tuplelist(list, current_tuple : Link_Tuple):
+    tuple_list = []
+    for item in list:
+        tuple_list.append(Link_Tuple(item, current_tuple.link))
+    return tuple_list
+
+def find_specific_link(link, list):
+    for item in list:
+        if item.link == link:
+            return item
+    return None
+
+
+def find_path(visited):
+    path = []
+    last = visited[-1]
+    while last is not None:
+        path.append(last.link) if last.prev is not None else None
+        last = find_specific_link(last.prev, visited)
+    return path[::-1][:-1]
+
+async def find_goal(start_link, goal = "/wiki/Adolf_Hitler"):
+    success : bool = False
     wiki = "https://en.wikipedia.org"
-    links = get_links(html)
-    visited = []
-    print(len(links))
-    print(links[0:10])
-    #Djikstra?
+    count_from_cache = 0
+    count_from_web = 0
+    html = get_html(wiki+start_link)
+    start_link_tuple : Link_Tuple = Link_Tuple(start_link, None)
+    links , trash = get_links(html, start_link_tuple)
+    visited = [start_link_tuple]
+    count = 0
+    #BFS
     while links:
-        #print(len(links))
-        if "_lists" in links:
-            print("WTF")
+        if "_lists" in links: 
             break
-        current_link = links.pop(0)
+        current_tuple = links.pop(0)
+        current_link = current_tuple.link
         if current_link in visited:
             continue
-        #print(current_link)
-        #print(count)
-        #print(current_link)
-        visited.append(current_link)
+        visited.append(current_tuple)
         if current_link == goal:
-            print("Found!")
             break
         else:
             #print("Not yet!", current_link)
             link_db : Link = await db.get_link(current_link)
             if link_db is not None and link_db != False:
-                print(count)
-                links = links + link_db.get_list()
-                #if goal in links:
-                #    print("Found!", current_link)
-                #    break
-                #if goal in links:
-                    #print("Found!", current_link)
-                    #break
+                temp_links = link_db.get_list()
+                links = links + list_to_tuplelist(temp_links, current_tuple)
+                if goal in temp_links:
+                    hitler_tuple = Link_Tuple(goal, current_link)
+                    visited.append(hitler_tuple)
+                    success = True
+                    break
                 count += 1
+                count_from_cache += 1
                 continue
-                pass
-                #continue
-                #break
-            print(wiki, current_link)
             html = get_html(wiki + current_link)
             count += 1
+            count_from_web += 1
             if html is None:
                 continue
-            new_links = get_links(html)
-            temp = time.time()
-            await db.create_link(current_link, list_to_str(new_links))
-            db_time = db_time + (time.time() - temp)
-            links = links + new_links
-            #Remove duplicates
-            #links = list(set(links))
-    #print(html)
-time_now = time.time()
-asyncio.run(main())
-print("Request time: ", time_request)
-print("Parse time: ", time_parse)
-print("Count: ", count)
-print("Total time: ", time.time() - time_now)
-print("Function times", time_request + time_parse)
-print("DB time: ", db_time)
+            
+            new_links_tuples, new_links = get_links(html, current_tuple)
+            await db.create_link(current_link, list_to_str(new_links)) #Cache it
+            links = links + list_to_tuplelist(new_links, current_tuple)
+            if goal in new_links:
+                    hitler_tuple = Link_Tuple(goal, current_link)
+                    visited.append(hitler_tuple)
+                    success = True
+                    break
+            
+    path  = [start_link] + find_path(visited) + [goal]
+    dict_to_return = {"path": path, "count": len(find_path(visited)), "count_from_cache": count_from_cache, "count_from_web": count_from_web}
+    return dict_to_return
+
+async def main():
+    start_link = "/wiki/Blackzilians"#"/wiki/Peter_Sitsen"
+    goal = "/wiki/Adolf_Hitler"
+    start_time = time.time()
+    request_dict = await find_goal(start_link, goal)
+    request_dict["time"] = round(time.time() - start_time, 3)
+    request_json = json.dumps(request_dict)
+    print(request_json)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -80,7 +80,7 @@ async def main():
     global count
 
     success : bool = False
-    start_link = "/wiki/Babul_Ka_Angna_(TV_series)"
+    start_link = "/wiki/Blackzilians"#"/wiki/Peter_Sitsen"
     goal = "/wiki/Adolf_Hitler"
     wiki = "https://en.wikipedia.org"
     html = get_html(wiki+start_link)
@@ -105,17 +105,18 @@ async def main():
             #print("Not yet!", current_link)
             link_db : Link = await db.get_link(current_link)
             if link_db is not None and link_db != False:
-                temp_links = link_db.get_list()
-                links = links + list_to_tuplelist(temp_links, current_tuple)
-                if goal in temp_links:
+                #temp_links = link_db.get_list()
+                #links = links + list_to_tuplelist(temp_links, current_tuple)
+                '''if goal in temp_links:
                     hitler_tuple = Link_Tuple(goal, current_link)
                     visited.append(hitler_tuple)
                     print("Found!", current_link)
                     success = True
-                    break
-                count += 1
+                    break'''
+                #print(count)
+                #count += 1
                 continue
-
+            print(count, current_link)
             html = get_html(wiki + current_link)
             count += 1
             if html is None:
@@ -126,6 +127,12 @@ async def main():
             await db.create_link(current_link, list_to_str(new_links))
             db_time = db_time + (time.time() - temp)
             links = links + list_to_tuplelist(new_links, current_tuple)
+            '''if goal in new_links:
+                    hitler_tuple = Link_Tuple(goal, current_link)
+                    visited.append(hitler_tuple)
+                    print("Found!", current_link)
+                    success = True
+                    break'''
 
     print(find_path(visited))
     print(len(find_path(visited))-1, "clicks to reach Hitler's wiki page")
